@@ -8,30 +8,20 @@ import {
   Menu, 
   X,
   Workflow,
-  ExternalLink,
-  ArrowLeft,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  MessageCircle,
   Mail,
   Instagram,
   Music2,
-  Facebook,
   Zap,
   ShieldCheck,
-  Layout,
   Search,
-  Cpu,
   Layers,
   Activity,
   Phone,
   MapPin,
-  Clock,
-  Plus,
-  Compass,
-  Code2,
-  Rocket
+  Plus
 } from 'lucide-react';
 
 const LOGO_URL = "https://i.ibb.co/GfPmzg1P/Untitled-design-5.png";
@@ -51,6 +41,90 @@ const BrandLogo = ({ size = "w-10 h-10", zoom = "scale-125" }) => (
     />
   </div>
 );
+
+// High-performance 3D Sphere Animation
+const InteractiveSphere = () => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+    let particles = [];
+    const particleCount = 280;
+    const radius = 220;
+    let rotationX = 0;
+    let rotationY = 0;
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+
+    const resize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      canvas.width = parent.clientWidth;
+      canvas.height = parent.clientHeight;
+    };
+
+    class Particle3D {
+      constructor() {
+        this.phi = Math.acos(-1 + (Math.random() * 2));
+        this.theta = Math.random() * Math.PI * 2;
+        this.size = Math.random() * 1.2 + 0.4;
+      }
+
+      project() {
+        const x = radius * Math.sin(this.phi) * Math.cos(this.theta);
+        const y = radius * Math.sin(this.phi) * Math.sin(this.theta);
+        const z = radius * Math.cos(this.phi);
+
+        const rotX = x * Math.cos(rotationY) - z * Math.sin(rotationY);
+        const rotZ = x * Math.sin(rotationY) + z * Math.cos(rotationY);
+        const finalY = y * Math.cos(rotationX) - rotZ * Math.sin(rotationX);
+        const finalZ = y * Math.sin(rotationX) + rotZ * Math.cos(rotationX);
+
+        const perspective = 1000 / (1000 - finalZ);
+        const px = rotX * perspective + canvas.width / 2;
+        const py = finalY * perspective + canvas.height / 2;
+
+        return { px, py, opacity: (finalZ + radius) / (radius * 2), size: this.size * perspective };
+      }
+    }
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle3D());
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      rotationX += (targetRotationX - rotationX) * 0.05;
+      rotationY += (targetRotationY - rotationY) * 0.05;
+      targetRotationY += 0.0012;
+      targetRotationX += 0.0006;
+
+      particles.forEach(p => {
+        const { px, py, opacity, size } = p.project();
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(45, 212, 191, ${opacity * 0.4})`;
+        ctx.fill();
+      });
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    window.addEventListener('resize', resize);
+    resize();
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="w-full h-full pointer-events-none" />;
+};
 
 const HeroBackground = () => {
   const canvasRef = useRef(null);
@@ -79,7 +153,7 @@ const HeroBackground = () => {
         this.density = (Math.random() * 20) + 1;
       }
       draw() {
-        ctx.fillStyle = 'rgba(45, 212, 191, 0.3)';
+        ctx.fillStyle = 'rgba(45, 212, 191, 0.2)';
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.closePath();
@@ -114,7 +188,7 @@ const HeroBackground = () => {
 
     const init = () => {
       particles = [];
-      const numberOfParticles = (canvas.width * canvas.height) / 10000;
+      const numberOfParticles = (canvas.width * canvas.height) / 12000;
       for (let i = 0; i < numberOfParticles; i++) {
         let x = Math.random() * canvas.width;
         let y = Math.random() * canvas.height;
@@ -385,6 +459,10 @@ const App = () => {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
           }
+          @keyframes orb-float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+          }
           .animate-mask-line { 
             animation: slide-mask-reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
           }
@@ -471,11 +549,21 @@ const App = () => {
       {view === 'home' && (
         <main>
           {/* HERO */}
-          <section className="relative min-h-[85vh] flex items-center pt-24 pb-12 overflow-hidden">
-            <HeroBackground />
-            <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-teal-500/10 blur-[150px] rounded-full mix-blend-screen pointer-events-none" />
+          <section className="relative min-h-[90vh] flex items-center pt-24 pb-12 overflow-hidden">
+            <div className="absolute inset-0 z-0 pointer-events-none">
+                <HeroBackground />
+            </div>
             
-            <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div 
+              className="absolute top-[10%] right-[-5%] w-[60%] h-[80%] opacity-50 hidden lg:block pointer-events-none z-0" 
+              style={{ animation: 'orb-float 15s ease-in-out infinite' }}
+            >
+              <InteractiveSphere />
+            </div>
+
+            <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-teal-500/10 blur-[150px] rounded-full mix-blend-screen pointer-events-none z-0" />
+            
+            <div className="max-w-7xl mx-auto px-6 relative z-10 w-full pointer-events-none">
               <div className="max-w-4xl">
                 <div className="inline-flex items-center space-x-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6 animate-in" style={{animationDelay: '0.1s'}}>
                   <div className="w-2 h-2 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(45,212,191,0.8)]" />
@@ -494,7 +582,7 @@ const App = () => {
                     </span>
                   </span>
                   <span className="line-mask">
-                    <span className="inline-block animate-mask-line text-teal-500 italic glow-scale" style={{ animationDelay: '0.5s' }}>
+                    <span className="inline-block animate-mask-line text-teal-400 italic glow-scale" style={{ animationDelay: '0.5s' }}>
                       {"Online.".split("").map((char, i) => (
                         <span 
                           key={i} 
@@ -512,21 +600,26 @@ const App = () => {
                   Websites, content and smart systems designed to generate consistent enquiries.
                 </p>
                 
-                <div className="flex flex-col sm:flex-row items-center gap-6 animate-in" style={{animationDelay: '1.1s'}}>
-                  <button onClick={() => scrollToSection('expertise')} className="group bg-white text-[#0A0C10] font-bold px-10 py-5 rounded-full transition-all uppercase text-[10px] tracking-[0.2em] flex items-center justify-center hover:bg-gray-200">
-                    Explore Services <ArrowRight className="ml-3 w-4 h-4" />
+                {/* BUTTONS MATCHED TO SCREENSHOT */}
+                <div className="flex flex-col sm:flex-row items-center gap-6 animate-in relative z-30 pointer-events-auto" style={{animationDelay: '1.1s'}}>
+                  <button 
+                    onClick={() => scrollToSection('expertise')} 
+                    className="group bg-[#FFFFFF] text-[#0A0C10] font-black px-12 py-6 rounded-full transition-all uppercase text-[10px] tracking-[0.2em] flex items-center justify-center hover:scale-105 cursor-pointer active:scale-95 h-16 min-w-[240px]"
+                  >
+                    Explore Services <ArrowRight className="ml-3 w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </button>
                   
                   <button 
                     onClick={() => scrollToSection('start-project')} 
-                    className="flex items-center space-x-3 px-8 py-5 rounded-xl bg-teal-500 text-black hover:bg-teal-400 transition-all shadow-lg shadow-teal-500/20 group transform active:scale-95"
+                    className="flex items-center justify-center space-x-3 px-10 py-6 rounded-2xl bg-[#1CB8A1] text-[#0A0C10] font-black hover:bg-[#2DD4BF] hover:scale-105 transition-all shadow-[0_0_20px_rgba(28,184,161,0.4)] group transform active:scale-95 cursor-pointer h-16 min-w-[240px]"
                   >
-                    <span className="font-bold tracking-widest uppercase text-[10px]">Start a Project</span>
-                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    <span className="tracking-[0.2em] uppercase text-[10px]">Start a Project</span>
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>
             </div>
+            <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#0A0C10] to-transparent z-10 pointer-events-none" />
           </section>
 
           {/* Trust Bar */}
